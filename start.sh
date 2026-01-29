@@ -9,15 +9,47 @@ echo "Fox Hardware Inventory - Quick Start"
 echo "=========================================="
 echo ""
 
+# Detect OS
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ -n "$WINDIR" ]] || [[ "$OS" == "Windows_NT" ]]; then
+    IS_WINDOWS=true
+else
+    IS_WINDOWS=false
+fi
+
 # Step 1: Install uv if not already installed
 echo "1. Checking for uv..."
 if ! command -v uv &> /dev/null; then
     echo "   Installing uv..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="$HOME/.cargo/bin:$PATH"
+    if [ "$IS_WINDOWS" = true ]; then
+        # Windows installation via PowerShell
+        echo "   Detected Windows - using PowerShell installer..."
+        if command -v powershell.exe &> /dev/null; then
+            powershell.exe -ExecutionPolicy ByPass -Command "irm https://astral.sh/uv/install.ps1 | iex"
+            # Add to PATH for current session
+            export PATH="$USERPROFILE/.cargo/bin:$PATH"
+            # Refresh PATH in current shell
+            if [ -d "$USERPROFILE/.cargo/bin" ]; then
+                export PATH="$USERPROFILE/.cargo/bin:$PATH"
+            fi
+        else
+            echo "   ✗ PowerShell not found. Please install uv manually:"
+            echo "     powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\""
+            exit 1
+        fi
+    else
+        # Unix-like installation
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        export PATH="$HOME/.cargo/bin:$PATH"
+    fi
+    
+    # Verify installation
     if ! command -v uv &> /dev/null; then
-        echo "   ✗ Failed to install uv. Please install manually:"
-        echo "     curl -LsSf https://astral.sh/uv/install.sh | sh"
+        echo "   ⚠️  uv installed but not in PATH. Please restart your terminal or add to PATH manually."
+        if [ "$IS_WINDOWS" = true ]; then
+            echo "   Windows: Add $USERPROFILE\\.cargo\\bin to your PATH"
+        else
+            echo "   Unix: Add $HOME/.cargo/bin to your PATH"
+        fi
         exit 1
     fi
     echo "   ✓ uv installed"

@@ -49,8 +49,15 @@ uvicorn app.main:app --reload
 ## Quick Start (Full Setup with Data Import)
 
 **Option 1: Use the startup script (recommended):**
+
+**macOS/Linux/WSL:**
 ```bash
 ./start.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+.\start.ps1
 ```
 
 **Option 2: Manual startup:**
