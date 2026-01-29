@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Refresh Schedule - Fox Hardware Inventory{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-slate-100">Refresh Schedule</h1>
+        <p class="mt-2 text-sm text-slate-400">Assets due for refresh in the next {{ days }} days</p>
+    </div>
+
+    <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+        <table class="min-w-full divide-y divide-slate-700">
+            <thead class="bg-slate-700">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Asset Tag</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Department</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Assigned To</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Refresh Due Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Days Until Due</th>
+                </tr>
+            </thead>
+            <tbody class="bg-slate-800 divide-y divide-slate-700">
+                {% for asset in assets %}
+                <tr class="hover:bg-slate-700">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="/assets/{{ asset.id }}" class="text-blue-400 hover:text-blue-300">{{ asset.asset_tag }}</a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{{ asset.department or '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{{ asset.assigned_user_name or '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{{ asset.refresh_due_date }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                        {% if asset.refresh_due_date %}
+                            {% set days_diff = (asset.refresh_due_date - today).days %}
+                            {{ days_diff }} days
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if assets|length == 0 %}
+        <div class="text-center py-12">
+            <p class="text-slate-400">No assets due for refresh</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

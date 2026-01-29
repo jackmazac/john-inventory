@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}{{ asset.asset_tag }} - Fox Hardware Inventory{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="mb-6">
+        <a href="/assets" class="text-blue-400 hover:text-blue-300 text-sm mb-4 inline-block">← Back to Assets</a>
+        <h1 class="text-3xl font-bold text-slate-100">{{ asset.asset_tag }}</h1>
+        <p class="mt-2 text-sm text-slate-400">Asset Details</p>
+    </div>
+
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h2 class="text-lg font-semibold text-slate-100 mb-4">Basic Information</h2>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Asset Tag</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.asset_tag }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Computer Name</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.computer_name or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Serial Number</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.serial_number or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Device Type</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.device_type or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Make</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.make or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Model</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.model or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Operating System</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.operating_system or "-" }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <div>
+                <h2 class="text-lg font-semibold text-slate-100 mb-4">Assignment & Location</h2>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Status</dt>
+                        <dd class="mt-1">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                {% if asset.status == 'active' %}bg-green-900 text-green-200
+                                {% elif asset.status == 'retired' %}bg-gray-900 text-gray-200
+                                {% elif asset.status == 'in-repair' %}bg-yellow-900 text-yellow-200
+                                {% else %}bg-slate-900 text-slate-200{% endif %}">
+                                {{ asset.status }}
+                            </span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Department</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.department or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Assigned To</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.assigned_user_name or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">User ID</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.assigned_user_id or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Building</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.location_building or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Floor</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.location_floor or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Room</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.location_room or "-" }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <div>
+                <h2 class="text-lg font-semibold text-slate-100 mb-4">Lifecycle</h2>
+                <dl class="space-y-3">
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Purchase Date</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.purchase_date or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Warranty Expiration</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.warranty_expiration or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Refresh Due Date</dt>
+                        <dd class="mt-1 text-sm text-slate-100">{{ asset.refresh_due_date or "-" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-slate-400">Last Verified</dt>
+                        <dd class="mt-1 text-sm text-slate-100">
+                            {% if asset.last_verified_at %}
+                                {{ asset.last_verified_at.strftime('%Y-%m-%d') }} by {{ asset.last_verified_by or "-" }}
+                            {% else %}
+                                Never
+                            {% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+
+            <div>
+                <h2 class="text-lg font-semibold text-slate-100 mb-4">Notes</h2>
+                <p class="text-sm text-slate-300">{{ asset.notes or "No notes" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Help - Fox Hardware Inventory{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-slate-100">Help & Documentation</h1>
+        <p class="mt-2 text-sm text-slate-400">Get help using the Fox Hardware Inventory system</p>
+    </div>
+
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+        <h2 class="text-xl font-semibold text-slate-100 mb-4">Getting Started</h2>
+        <div class="space-y-4 text-slate-300">
+            <div>
+                <h3 class="font-medium text-slate-100 mb-2">Importing Assets</h3>
+                <p class="text-sm">Use the Import page to upload Excel files containing asset data. The system will automatically detect columns and map them to asset fields.</p>
+            </div>
+            <div>
+                <h3 class="font-medium text-slate-100 mb-2">Managing Assets</h3>
+                <p class="text-sm">View and edit assets from the Assets page. Use filters and search to find specific assets quickly.</p>
+            </div>
+            <div>
+                <h3 class="font-medium text-slate-100 mb-2">Keyboard Shortcuts</h3>
+                <ul class="text-sm list-disc list-inside space-y-1">
+                    <li><kbd class="px-2 py-1 bg-slate-700 rounded">⌘K</kbd> or <kbd class="px-2 py-1 bg-slate-700 rounded">Ctrl+K</kbd> - Focus search</li>
+                    <li><kbd class="px-2 py-1 bg-slate-700 rounded">/</kbd> - Focus search (when not in input field)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

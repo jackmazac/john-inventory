@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Verification Campaigns - Fox Hardware Inventory{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-100">Verification Campaigns</h1>
+            <p class="mt-2 text-sm text-slate-400">Manage asset verification campaigns</p>
+        </div>
+        <a href="/verification/campaigns/new" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+            New Campaign
+        </a>
+    </div>
+
+    <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+        <table class="min-w-full divide-y divide-slate-700">
+            <thead class="bg-slate-700">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Department</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Created</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Due Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Progress</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-slate-300 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-slate-800 divide-y divide-slate-700">
+                {% for campaign in campaigns %}
+                <tr class="hover:bg-slate-700">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-200">{{ campaign.name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{{ campaign.department or 'All' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{{ campaign.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{{ campaign.due_date or '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                        {{ campaign.verified_count }} / {{ campaign.total_count }}
+                        {% if campaign.total_count > 0 %}
+                        ({{ ((campaign.verified_count / campaign.total_count) * 100)|round }}%)
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                            {% if campaign.status == 'completed' %}bg-green-900 text-green-200
+                            {% elif campaign.status == 'expired' %}bg-red-900 text-red-200
+                            {% else %}bg-blue-900 text-blue-200{% endif %}">
+                            {{ campaign.status }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="/verification/campaigns/{{ campaign.id }}" class="text-blue-400 hover:text-blue-300">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if campaigns|length == 0 %}
+        <div class="text-center py-12">
+            <p class="text-slate-400">No verification campaigns</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

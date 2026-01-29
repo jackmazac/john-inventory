@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Department Inventory - Fox Hardware Inventory{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-slate-100">Department Inventory</h1>
+        <p class="mt-2 text-sm text-slate-400">Assets by department</p>
+    </div>
+
+    {% for dept, dept_assets in dept_groups.items() %}
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 mb-6">
+        <h2 class="text-xl font-semibold text-slate-100 mb-4">{{ dept }} ({{ dept_assets|length }} assets)</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-700">
+                <thead class="bg-slate-700">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase">Asset Tag</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase">Assigned To</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase">OS</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-slate-800 divide-y divide-slate-700">
+                    {% for asset in dept_assets %}
+                    <tr class="hover:bg-slate-700">
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <a href="/assets/{{ asset.id }}" class="text-blue-400 hover:text-blue-300">{{ asset.asset_tag }}</a>
+                        </td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm text-slate-300">{{ asset.assigned_user_name or '-' }}</td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm text-slate-300">{{ asset.status }}</td>
+                        <td class="px-4 py-4 whitespace-nowrap text-sm text-slate-300">{{ asset.operating_system or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

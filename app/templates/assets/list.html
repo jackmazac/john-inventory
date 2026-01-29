@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+
+{% block title %}Assets - Fox Hardware Inventory{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function updateQueryParam(key, value) {
+    const url = new URL(window.location);
+    url.searchParams.set(key, value);
+    url.searchParams.set('page', '1'); // Reset to page 1 when changing per_page
+    return url.toString();
+}
+
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.asset-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const checkboxes = document.querySelectorAll('.asset-checkbox:checked');
+    const count = checkboxes.length;
+    const toolbar = document.getElementById('bulk-actions-toolbar');
+    const countSpan = document.getElementById('selected-count');
+    
+    if (countSpan) countSpan.textContent = count;
+    
+    if (count > 0) {
+        toolbar.classList.remove('hidden');
+    } else {
+        toolbar.classList.add('hidden');
+    }
+}
+
+function getSelectedIds() {
+    const checkboxes = document.querySelectorAll('.asset-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function applyBulkUpdate() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    const status = document.getElementById('bulk-status').value;
+    const department = document.getElementById('bulk-department').value;
+    
+    if (!status && !department) {
+        alert('Please select a status or department to update');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('asset_ids', JSON.stringify(ids));
+    if (status) formData.append('status', status);
+    if (department) formData.append('department', department);
+    
+    fetch('/assets/bulk-update', {
+        method: 'POST',
+        body: formData
+    }).then(() => {
+        window.location.reload();
+    });
+}
+
+function deleteSelected() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${ids.length} asset(s)?`)) return;
+    
+    const formData = new FormData();
+    formData.append('asset_ids', JSON.stringify(ids));
+    
+    fetch('/assets/bulk-delete', {
+        method: 'POST',
+        body: formData
+    }).then(() => {
+        window.location.reload();
+    });
+}
+
+function exportSelected() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return;
+    
+    const params = new URLSearchParams();
+    params.append('selected_ids', ids.join(','));
+    window.location.href = `/assets/export-selected?${params.toString()}`;
+}
+
+function clearSelection() {
+    document.querySelectorAll('.asset-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('select-all').checked = false;
+    updateBulkActions();
+}
+
+// Keyboard shortcut for search (⌘K or Ctrl+K)
+document.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('search-input')?.focus();
+    }
+    // Forward slash to focus search
+    if (e.key === '/' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        document.getElementById('search-input')?.focus();
+    }
+});
+</script>
+{% include "components/delete_modal.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-100">Assets</h1>
+            <p class="mt-2 text-sm text-slate-400">Manage hardware inventory</p>
+            {% if last_import %}
+            <p class="mt-1 text-xs text-slate-500">
+                Last import: {{ last_import.uploaded_at.strftime('%B %d, %Y at %I:%M %p') }} 
+                ({{ last_import.records_processed }} records) - 
+                <a href="/import/history" class="text-blue-400 hover:text-blue-300">View history</a>
+            </p>
+            {% endif %}
+        </div>
+        <div class="flex items-center space-x-2">
+            <a href="/assets/export?format=xlsx&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}" 
+               class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                Export
+            </a>
+            <a href="/import" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                Import Assets
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
+        <form hx-get="/assets" 
+              hx-target="#asset-table-container"
+              hx-trigger="input changed delay:500ms, submit"
+              hx-indicator="#loading-indicator"
+              class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <input type="text" 
+                   name="search" 
+                   value="{{ search }}"
+                   placeholder="Search by asset tag, name, or user... (⌘K)"
+                   id="search-input"
+                   class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            
+            <select name="status" 
+                    class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Statuses</option>
+                <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+                <option value="retired" {% if status == "retired" %}selected{% endif %}>Retired</option>
+                <option value="in-repair" {% if status == "in-repair" %}selected{% endif %}>In Repair</option>
+                <option value="unassigned" {% if status == "unassigned" %}selected{% endif %}>Unassigned</option>
+            </select>
+            
+            <select name="department" 
+                    class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Departments</option>
+                <option value="IT" {% if department == "IT" %}selected{% endif %}>IT</option>
+                <option value="NEWS" {% if department == "NEWS" %}selected{% endif %}>NEWS</option>
+                <option value="SALES" {% if department == "SALES" %}selected{% endif %}>SALES</option>
+                <option value="ENG" {% if department == "ENG" %}selected{% endif %}>ENG</option>
+            </select>
+            
+            <div class="flex items-center space-x-2">
+                {% if search or status or department %}
+                <a href="/assets" 
+                   class="px-3 py-2 bg-slate-600 hover:bg-slate-700 text-slate-100 rounded-md text-sm">
+                    Clear Filters
+                </a>
+                <span class="px-2 py-1 bg-blue-600 text-white rounded-full text-xs">
+                    {% set filter_count = [search, status, department]|select|list|length %}
+                    {{ filter_count }} active
+                </span>
+                {% endif %}
+                <button type="submit" 
+                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium">
+                    Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bulk Actions Toolbar -->
+    <div id="bulk-actions-toolbar" class="hidden bg-slate-800 rounded-lg border border-blue-500 p-4 mb-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <span class="text-sm font-medium text-slate-100">
+                    <span id="selected-count">0</span> asset(s) selected
+                </span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <select id="bulk-status" class="px-3 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm">
+                    <option value="">Change Status</option>
+                    <option value="active">Active</option>
+                    <option value="retired">Retired</option>
+                    <option value="in-repair">In Repair</option>
+                </select>
+                <select id="bulk-department" class="px-3 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm">
+                    <option value="">Change Department</option>
+                    <option value="IT">IT</option>
+                    <option value="NEWS">NEWS</option>
+                    <option value="SALES">SALES</option>
+                    <option value="ENG">ENG</option>
+                </select>
+                <button onclick="applyBulkUpdate()" 
+                        class="px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm">
+                    Apply
+                </button>
+                <button onclick="exportSelected()" 
+                        class="px-4 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm">
+                    Export Selected
+                </button>
+                <button onclick="deleteSelected()" 
+                        class="px-4 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm">
+                    Delete Selected
+                </button>
+                <button onclick="clearSelection()" 
+                        class="px-4 py-1 bg-slate-600 hover:bg-slate-700 text-white rounded text-sm">
+                    Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="htmx-indicator fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-slate-800 rounded-lg p-6">
+            <div class="flex items-center space-x-3">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span class="text-slate-100">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Asset Table -->
+    <div id="asset-table-container">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-700">
+                    <thead class="bg-slate-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left">
+                                <input type="checkbox" 
+                                       id="select-all" 
+                                       onchange="toggleSelectAll(this)"
+                                       class="rounded border-slate-600 text-blue-600 focus:ring-blue-500">
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                <a href="?sort_by=asset_tag&order={% if sort_by == 'asset_tag' and order == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}"
+                                   class="hover:text-slate-100 flex items-center space-x-1">
+                                    <span>Asset Tag</span>
+                                    {% if sort_by == 'asset_tag' %}
+                                        {% if order == 'asc' %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                        {% endif %}
+                                    {% else %}
+                                    <svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                <a href="?sort_by=computer_name&order={% if sort_by == 'computer_name' and order == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}"
+                                   class="hover:text-slate-100 flex items-center space-x-1">
+                                    <span>Computer Name</span>
+                                    {% if sort_by == 'computer_name' %}
+                                        {% if order == 'asc' %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                        {% endif %}
+                                    {% else %}
+                                    <svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                <a href="?sort_by=department&order={% if sort_by == 'department' and order == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}"
+                                   class="hover:text-slate-100 flex items-center space-x-1">
+                                    <span>Department</span>
+                                    {% if sort_by == 'department' %}
+                                        {% if order == 'asc' %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                        {% endif %}
+                                    {% else %}
+                                    <svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                <a href="?sort_by=assigned_user_name&order={% if sort_by == 'assigned_user_name' and order == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}"
+                                   class="hover:text-slate-100 flex items-center space-x-1">
+                                    <span>Assigned To</span>
+                                    {% if sort_by == 'assigned_user_name' %}
+                                        {% if order == 'asc' %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                        {% endif %}
+                                    {% else %}
+                                    <svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                <a href="?sort_by=status&order={% if sort_by == 'status' and order == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}"
+                                   class="hover:text-slate-100 flex items-center space-x-1">
+                                    <span>Status</span>
+                                    {% if sort_by == 'status' %}
+                                        {% if order == 'asc' %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                        {% endif %}
+                                    {% else %}
+                                    <svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                <a href="?sort_by=device_type&order={% if sort_by == 'device_type' and order == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}"
+                                   class="hover:text-slate-100 flex items-center space-x-1">
+                                    <span>Device Type</span>
+                                    {% if sort_by == 'device_type' %}
+                                        {% if order == 'asc' %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                        {% endif %}
+                                    {% else %}
+                                    <svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                <a href="?sort_by=refresh_due_date&order={% if sort_by == 'refresh_due_date' and order == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}"
+                                   class="hover:text-slate-100 flex items-center space-x-1">
+                                    <span>Refresh Due</span>
+                                    {% if sort_by == 'refresh_due_date' %}
+                                        {% if order == 'asc' %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                        {% endif %}
+                                    {% else %}
+                                    <svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                <a href="?sort_by=last_verified_at&order={% if sort_by == 'last_verified_at' and order == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}"
+                                   class="hover:text-slate-100 flex items-center space-x-1">
+                                    <span>Last Verified</span>
+                                    {% if sort_by == 'last_verified_at' %}
+                                        {% if order == 'asc' %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                        {% endif %}
+                                    {% else %}
+                                    <svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                    </svg>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                Operating System
+                            </th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-slate-800 divide-y divide-slate-700">
+                        {% for asset in assets %}
+                        {% include "components/asset_row.html" %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if total == 0 %}
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-slate-100">No assets found</h3>
+                <p class="mt-1 text-sm text-slate-400">Try adjusting your filters or import assets to get started.</p>
+                <div class="mt-6">
+                    <a href="/import" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                        Import Assets
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-4 flex items-center justify-between">
+            <div class="text-sm text-slate-400">
+                <span class="font-medium text-slate-300">Page {{ page }} of {{ total_pages }}</span>
+                <span class="mx-2">•</span>
+                Showing {{ (page - 1) * per_page + 1 }} to {{ [page * per_page, total]|min }} of {{ total }} assets
+            </div>
+            <div class="flex items-center space-x-2">
+                <select name="per_page" 
+                        onchange="window.location.href = updateQueryParam('per_page', this.value)"
+                        class="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                </select>
+                <span class="text-sm text-slate-400">per page</span>
+                <div class="flex space-x-1 ml-4">
+                    {% if page > 1 %}
+                    <a href="?page={{ page - 1 }}&per_page={{ per_page }}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}&sort_by={{ sort_by }}&order={{ order }}"
+                       class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-md text-sm">
+                        Previous
+                    </a>
+                    {% endif %}
+                    {% for p in range(1, total_pages + 1) %}
+                        {% if p == page %}
+                        <span class="px-3 py-2 bg-blue-600 text-white rounded-md text-sm font-medium">{{ p }}</span>
+                        {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                        <a href="?page={{ p }}&per_page={{ per_page }}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}&sort_by={{ sort_by }}&order={{ order }}"
+                           class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-md text-sm">
+                            {{ p }}
+                        </a>
+                        {% elif p == page - 3 or p == page + 3 %}
+                        <span class="px-2 text-slate-400">...</span>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page < total_pages %}
+                    <a href="?page={{ page + 1 }}&per_page={{ per_page }}&search={{ search|urlencode }}&status={{ status|urlencode }}&department={{ department|urlencode }}&sort_by={{ sort_by }}&order={{ order }}"
+                       class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-md text-sm">
+                        Next
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

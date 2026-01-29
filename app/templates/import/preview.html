@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Import Preview - Fox Hardware Inventory{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-slate-100">Import Preview</h1>
+        <p class="mt-2 text-sm text-slate-400">Review the transformed data before importing</p>
+    </div>
+
+    <!-- Validation Summary -->
+    {% if validation.error_count > 0 %}
+    <div class="bg-red-900/20 border border-red-700 rounded-lg p-4 mb-6">
+        <h3 class="text-lg font-semibold text-red-400 mb-2">Validation Errors ({{ validation.error_count }})</h3>
+        <ul class="list-disc list-inside text-sm text-red-300 space-y-1">
+            {% for error in validation.errors[:10] %}
+            <li>Row {{ error.row }}: {{ error.message }}</li>
+            {% endfor %}
+            {% if validation.errors|length > 10 %}
+            <li class="text-slate-400">... and {{ validation.errors|length - 10 }} more errors</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Delta Summary -->
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 mb-6">
+        <h3 class="text-lg font-semibold text-slate-100 mb-4">Import Summary</h3>
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="bg-green-900/20 border border-green-700 rounded p-3">
+                <div class="text-2xl font-bold text-green-400">{{ deltas.new|length }}</div>
+                <div class="text-sm text-green-300">New Assets</div>
+            </div>
+            <div class="bg-yellow-900/20 border border-yellow-700 rounded p-3">
+                <div class="text-2xl font-bold text-yellow-400">{{ deltas.modified|length }}</div>
+                <div class="text-sm text-yellow-300">Modified Assets</div>
+            </div>
+            <div class="bg-slate-700 border border-slate-600 rounded p-3">
+                <div class="text-2xl font-bold text-slate-400">{{ deltas.unchanged|length }}</div>
+                <div class="text-sm text-slate-300">Unchanged</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 mb-6">
+        <p class="text-sm text-slate-300 mb-4">
+            <strong>Total rows:</strong> {{ total_rows }}
+            {% if total_rows > 50 %}
+            <span class="text-yellow-400">(Showing first 50 rows)</span>
+            {% endif %}
+        </p>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-700">
+                <thead class="bg-slate-700">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase">Asset Tag</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase">Department</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase">Assigned To</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase">OS</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-slate-800 divide-y divide-slate-700">
+                    {% for row in transformed_data %}
+                    {% set row_tag = row.asset_tag %}
+                    {% set is_new = deltas.new|selectattr('asset_tag', 'equalto', row_tag)|list|length > 0 %}
+                    {% set is_modified = deltas.modified|selectattr('row_data.asset_tag', 'equalto', row_tag)|list|length > 0 %}
+                    <tr class="hover:bg-slate-700 {% if is_new %}bg-green-900/20{% elif is_modified %}bg-yellow-900/20{% endif %}">
+                        <td class="px-4 py-3 text-sm text-slate-300">
+                            {{ row.asset_tag or '-' }}
+                            {% if is_new %}<span class="ml-2 text-xs text-green-400">NEW</span>{% endif %}
+                            {% if is_modified %}<span class="ml-2 text-xs text-yellow-400">MODIFIED</span>{% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-slate-300">{{ row.department or '-' }}</td>
+                        <td class="px-4 py-3 text-sm text-slate-300">{{ row.assigned_user_name or '-' }}</td>
+                        <td class="px-4 py-3 text-sm text-slate-300">{{ row.status or 'active' }}</td>
+                        <td class="px-4 py-3 text-sm text-slate-300">{{ row.operating_system or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-6 flex justify-end space-x-4">
+            <a href="/import" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg">
+                Cancel
+            </a>
+            <button onclick="commitImport()" 
+                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium">
+                Commit Import
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function commitImport() {
+    const mappingJson = '{{ mapping_json|safe }}';
+    const filePath = '{{ file_path|safe }}';
+    
+    if (confirm('Are you sure you want to commit this import? This will create/update assets in the database.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/import/commit';
+        
+        const mappingInput = document.createElement('input');
+        mappingInput.type = 'hidden';
+        mappingInput.name = 'mapping_json';
+        mappingInput.value = mappingJson;
+        form.appendChild(mappingInput);
+        
+        const filePathInput = document.createElement('input');
+        filePathInput.type = 'hidden';
+        filePathInput.name = 'file_path';
+        filePathInput.value = filePath;
+        form.appendChild(filePathInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

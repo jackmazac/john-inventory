@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Unassigned Assets - Fox Hardware Inventory{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-slate-100">Unassigned Assets</h1>
+        <p class="mt-2 text-sm text-slate-400">Active assets without assigned users</p>
+    </div>
+
+    <div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+        <table class="min-w-full divide-y divide-slate-700">
+            <thead class="bg-slate-700">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Asset Tag</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Department</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase">Operating System</th>
+                </tr>
+            </thead>
+            <tbody class="bg-slate-800 divide-y divide-slate-700">
+                {% for asset in assets %}
+                <tr class="hover:bg-slate-700">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="/assets/{{ asset.id }}" class="text-blue-400 hover:text-blue-300">{{ asset.asset_tag }}</a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{{ asset.department or '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{{ asset.status }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{{ asset.operating_system or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if assets|length == 0 %}
+        <div class="text-center py-12">
+            <p class="text-slate-400">No unassigned assets</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

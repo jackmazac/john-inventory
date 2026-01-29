@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Fox Hardware Inventory{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-slate-100">Dashboard</h1>
+        <p class="mt-2 text-sm text-slate-400">Hardware inventory overview</p>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        <a href="/assets" class="bg-slate-800 overflow-hidden shadow rounded-lg border border-slate-700 hover:border-blue-500 hover:shadow-lg transition-all cursor-pointer">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-slate-400 truncate">Total Assets</dt>
+                            <dd class="text-lg font-medium text-slate-100 flex items-center space-x-2" id="total-assets">
+                                <span>{{ stats.total }}</span>
+                                {% if stats.total_trend %}
+                                    {% if stats.total_trend > 0 %}
+                                    <span class="text-xs text-green-400 flex items-center">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                        </svg>
+                                        {{ stats.total_trend|round(1) }}%
+                                    </span>
+                                    {% elif stats.total_trend < 0 %}
+                                    <span class="text-xs text-red-400 flex items-center">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/>
+                                        </svg>
+                                        {{ stats.total_trend|abs|round(1) }}%
+                                    </span>
+                                    {% endif %}
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <a href="/reports/refresh-schedule?days=90" class="bg-slate-800 overflow-hidden shadow rounded-lg border border-slate-700 hover:border-blue-500 hover:shadow-lg transition-all cursor-pointer">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        {% set refresh_count = stats.due_for_refresh %}
+                        {% if refresh_count == 0 %}
+                            {% set icon_color = "text-green-400" %}
+                        {% elif refresh_count < 10 %}
+                            {% set icon_color = "text-yellow-400" %}
+                        {% else %}
+                            {% set icon_color = "text-red-400" %}
+                        {% endif %}
+                        <svg class="h-6 w-6 {{ icon_color }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-slate-400 truncate">Due for Refresh</dt>
+                            <dd class="text-lg font-medium text-slate-100" id="due-refresh">{{ stats.due_for_refresh }}</dd>
+                            <dd class="text-xs text-slate-500 mt-1">Next 90 days</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <a href="/assets?status=unassigned" class="bg-slate-800 overflow-hidden shadow rounded-lg border border-slate-700 hover:border-blue-500 hover:shadow-lg transition-all cursor-pointer">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-slate-400 truncate">Unassigned</dt>
+                            <dd class="text-lg font-medium text-slate-100" id="unassigned">{{ stats.unassigned }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <a href="/assets?status=active" class="bg-slate-800 overflow-hidden shadow rounded-lg border border-slate-700 hover:border-blue-500 hover:shadow-lg transition-all cursor-pointer">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-slate-400 truncate">Active</dt>
+                            <dd class="text-lg font-medium text-slate-100 flex items-center space-x-2" id="active">
+                                <span>{{ stats.active }}</span>
+                                {% if stats.active_trend %}
+                                    {% if stats.active_trend > 0 %}
+                                    <span class="text-xs text-green-400 flex items-center">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                        </svg>
+                                        {{ stats.active_trend|round(1) }}%
+                                    </span>
+                                    {% elif stats.active_trend < 0 %}
+                                    <span class="text-xs text-red-400 flex items-center">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/>
+                                        </svg>
+                                        {{ stats.active_trend|abs|round(1) }}%
+                                    </span>
+                                    {% endif %}
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Quick Actions & Recent Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Quick Actions -->
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+            <h2 class="text-xl font-semibold text-slate-100 mb-4">Quick Actions</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <a href="/import" class="flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    Import Assets
+                </a>
+                <a href="/assets" class="flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    View Assets
+                </a>
+                <a href="/verification/campaigns/new" class="flex items-center justify-center px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Verify Assets
+                </a>
+                <a href="/reports/refresh-schedule" class="flex items-center justify-center px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Reports
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+            <h2 class="text-xl font-semibold text-slate-100 mb-4">Recent Activity</h2>
+            {% if recent_activity %}
+            <div class="space-y-3">
+                {% for activity in recent_activity %}
+                <div class="flex items-start space-x-3 p-2 rounded hover:bg-slate-700/50">
+                    <div class="flex-shrink-0">
+                        {% if activity.type == "import" %}
+                        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        {% else %}
+                        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-slate-300">{{ activity.description }}</p>
+                        <p class="text-xs text-slate-500 mt-1">{{ activity.timestamp.strftime('%b %d, %Y at %I:%M %p') }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-slate-400">No recent activity</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Department Breakdown -->
+    <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+        <h2 class="text-xl font-semibold text-slate-100 mb-4">Department Breakdown</h2>
+        {% if dept_counts %}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {% for dept, count in dept_counts.items()|sort(attribute='0') %}
+            <a href="/assets?department={{ dept|urlencode }}" 
+               class="bg-slate-700 rounded-lg p-4 hover:bg-slate-600 hover:border-blue-500 border border-transparent transition-all cursor-pointer">
+                <div class="text-sm text-slate-400">{{ dept }}</div>
+                <div class="text-2xl font-bold text-slate-100 mt-1">{{ count }}</div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-slate-400">No department data available</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

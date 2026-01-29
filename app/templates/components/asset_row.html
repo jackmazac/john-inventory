@@ -1,0 +1,124 @@
+<tr class="hover:bg-slate-700 {% if edit_mode %}bg-blue-900/20 border-l-4 border-blue-500{% endif %}" 
+    data-asset-id="{{ asset.id }}"
+    onclick="if (!event.target.closest('a, button, input, select')) { window.location.href='/assets/{{ asset.id }}'; }">
+    <td class="px-6 py-4 whitespace-nowrap">
+        <input type="checkbox" 
+               class="asset-checkbox rounded border-slate-600 text-blue-600 focus:ring-blue-500"
+               value="{{ asset.id }}"
+               onchange="updateBulkActions()">
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/assets/{{ asset.id }}" class="text-blue-400 hover:text-blue-300 hover:underline font-medium">
+            {{ asset.asset_tag }}
+        </a>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+        {{ asset.computer_name or "-" }}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        {% if edit_mode %}
+        <form hx-post="/assets/{{ asset.id }}/edit"
+              hx-target="closest tr"
+              hx-swap="outerHTML"
+              class="inline-flex items-center gap-2">
+            <select name="department" 
+                    class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">-</option>
+                <option value="IT" {% if asset.department == "IT" %}selected{% endif %}>IT</option>
+                <option value="NEWS" {% if asset.department == "NEWS" %}selected{% endif %}>NEWS</option>
+                <option value="SALES" {% if asset.department == "SALES" %}selected{% endif %}>SALES</option>
+                <option value="ENG" {% if asset.department == "ENG" %}selected{% endif %}>ENG</option>
+                <option value="WEATHER" {% if asset.department == "WEATHER" %}selected{% endif %}>WEATHER</option>
+                <option value="SPORTS" {% if asset.department == "SPORTS" %}selected{% endif %}>SPORTS</option>
+            </select>
+            <button type="submit" 
+                    class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded">
+                Save
+            </button>
+            <button type="button"
+                    hx-get="/assets/{{ asset.id }}/row"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    class="px-2 py-1 bg-slate-600 hover:bg-slate-700 text-white text-xs rounded">
+                Cancel
+            </button>
+        </form>
+        {% else %}
+        <div class="inline-flex items-center gap-2">
+            <span class="text-sm text-slate-300">{{ asset.department or "-" }}</span>
+            <button hx-get="/assets/{{ asset.id }}/edit-form"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    class="text-blue-400 hover:text-blue-300 text-xs">
+                Edit
+            </button>
+        </div>
+        {% endif %}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+        {% if asset.assigned_user_name and asset.assigned_user_name.upper() != "SPARE" %}
+            {{ asset.assigned_user_name }}
+        {% else %}
+            <span class="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs">Unassigned</span>
+        {% endif %}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span class="px-2 inline-flex items-center text-xs leading-5 font-semibold rounded-full
+            {% if asset.status == 'active' %}bg-green-900 text-green-200
+            {% elif asset.status == 'retired' %}bg-gray-900 text-gray-200
+            {% elif asset.status == 'in-repair' %}bg-yellow-900 text-yellow-200
+            {% else %}bg-slate-900 text-slate-200{% endif %}">
+            {% if asset.status == 'active' %}
+            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            {% elif asset.status == 'retired' %}
+            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            {% elif asset.status == 'in-repair' %}
+            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            {% endif %}
+            {{ asset.status }}
+        </span>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+        {{ asset.device_type or "-" }}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+        {% if asset.refresh_due_date %}
+            {{ asset.refresh_due_date.strftime('%Y-%m-%d') }}
+        {% else %}
+            -
+        {% endif %}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+        {% if asset.last_verified_at %}
+            {{ asset.last_verified_at.strftime('%Y-%m-%d') }}
+        {% else %}
+            -
+        {% endif %}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+        {{ asset.operating_system or "-" }}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <a href="/assets/{{ asset.id }}" 
+           class="inline-flex items-center px-2 py-1 text-blue-400 hover:text-blue-300 hover:underline mr-3 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            View
+        </a>
+        <button onclick="showDeleteModal({{ asset.id }}, '{{ asset.asset_tag|e }}')"
+                class="inline-flex items-center px-2 py-1 text-red-400 hover:text-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 rounded">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            Delete
+        </button>
+    </td>
+</tr>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Fox Hardware Inventory{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    <link rel="stylesheet" href="/static/css/custom.css">
+    <script src="/static/js/toast.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+    <nav class="bg-slate-800 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex flex-1">
+                    <div class="flex-shrink-0 flex items-center space-x-2">
+                        <svg class="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                        </svg>
+                        <a href="/" class="text-xl font-bold text-blue-400">Fox Hardware Inventory</a>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="/" 
+                           id="nav-dashboard"
+                           hx-boost="false"
+                           class="nav-link border-transparent text-slate-300 hover:border-slate-300 hover:text-slate-100 hover:bg-slate-700/50 inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium rounded-t transition-all">
+                            Dashboard
+                        </a>
+                        <a href="/assets" 
+                           id="nav-assets"
+                           hx-boost="false"
+                           class="nav-link border-transparent text-slate-300 hover:border-slate-300 hover:text-slate-100 hover:bg-slate-700/50 inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium rounded-t transition-all">
+                            Assets
+                        </a>
+                        <a href="/import" 
+                           id="nav-import"
+                           hx-boost="false"
+                           class="nav-link border-transparent text-slate-300 hover:border-slate-300 hover:text-slate-100 hover:bg-slate-700/50 inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium rounded-t transition-all">
+                            Import
+                        </a>
+                        <a href="/verification" 
+                           id="nav-verification"
+                           hx-boost="false"
+                           class="nav-link border-transparent text-slate-300 hover:border-slate-300 hover:text-slate-100 hover:bg-slate-700/50 inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium rounded-t transition-all">
+                            Verification
+                        </a>
+                        <a href="/reports/refresh-schedule" 
+                           id="nav-reports"
+                           hx-boost="false"
+                           class="nav-link border-transparent text-slate-300 hover:border-slate-300 hover:text-slate-100 hover:bg-slate-700/50 inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium rounded-t transition-all">
+                            Reports
+                        </a>
+                        <a href="/help" 
+                           id="nav-help"
+                           hx-boost="false"
+                           class="nav-link border-transparent text-slate-300 hover:border-slate-300 hover:text-slate-100 hover:bg-slate-700/50 inline-flex items-center px-3 pt-1 border-b-2 text-sm font-medium rounded-t transition-all">
+                            Help
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    {% set user = request.state.user if request.state.user else {"username": "Guest", "role": "guest", "is_authenticated": False} %}
+                    {% if user.is_authenticated %}
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right hidden sm:block">
+                            <div class="text-sm font-medium text-slate-100">{{ user.username }}</div>
+                            <div class="text-xs text-slate-400">{{ user.role|title }}</div>
+                        </div>
+                        <form method="post" action="/logout" class="inline">
+                            <button type="submit" 
+                                    class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-md text-sm">
+                                Logout
+                            </button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <a href="/login" 
+                       class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm">
+                        Login
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Toast notification container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // Function to update active nav link
+        function updateActiveNav() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            navLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                // Reset all links
+                link.classList.remove('border-blue-500', 'text-blue-400');
+                link.classList.add('border-transparent', 'text-slate-300');
+                
+                // Set active state
+                if (href === '/' && currentPath === '/') {
+                    link.classList.remove('border-transparent', 'text-slate-300');
+                    link.classList.add('border-blue-500', 'text-blue-400', 'bg-slate-700/30', 'font-semibold');
+                    link.style.borderLeftWidth = '4px';
+                } else if (href !== '/' && currentPath.startsWith(href)) {
+                    link.classList.remove('border-transparent', 'text-slate-300');
+                    link.classList.add('border-blue-500', 'text-blue-400', 'bg-slate-700/30', 'font-semibold');
+                    link.style.borderLeftWidth = '4px';
+                } else {
+                    link.style.borderLeftWidth = '0px';
+                }
+            });
+        }
+        
+        // Update on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateActiveNav);
+        } else {
+            updateActiveNav();
+        }
+        
+        // Update on navigation (for regular page loads)
+        window.addEventListener('popstate', updateActiveNav);
+        
+        // Ensure nav links use full page navigation (disable HTMX for nav links)
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                // Disable HTMX boost for navigation links
+                link.setAttribute('hx-boost', 'false');
+                link.setAttribute('data-htmx-boost', 'false');
+                
+                // Ensure normal navigation
+                link.addEventListener('click', function(e) {
+                    // Allow normal browser navigation
+                    return true;
+                });
+            });
+        });
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
